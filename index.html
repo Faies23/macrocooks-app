@@ -102,7 +102,13 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
 .stat .v{font-size:22px;font-weight:800}.stat .l{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px}
 .divider{height:1px;background:var(--line);margin:14px 0}
-.toast{position:absolute;left:50%;bottom:84px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--app-bg);padding:11px 18px;border-radius:999px;font-size:13px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:60;white-space:nowrap;max-width:90%}
+/* Message box. Its text used to be color:var(--app-bg), but --app-bg is a gradient, which is
+   not a colour, so the rule was dropped and the text took the same dark shade as the box: every
+   message was invisible. It also sat at z-index 60 under the sheet overlay (70), so a message
+   raised while a sheet was open was hidden twice over, and nowrap cut long ones off. */
+.toast{position:absolute;left:50%;bottom:84px;transform:translateX(-50%) translateY(20px);background:#2a201d;color:#fff;border:1px solid rgba(255,255,255,.16);box-shadow:0 8px 24px rgba(0,0,0,.28);padding:11px 18px;border-radius:18px;font-size:13px;font-weight:700;line-height:1.4;text-align:center;opacity:0;transition:.3s;pointer-events:none;z-index:90;white-space:normal;width:max-content;max-width:86%}
+.pay-spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);margin:0 auto 10px;animation:spin .9s linear infinite}
+@media (prefers-reduced-motion: reduce){.pay-spin{animation:none}}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* meal item */
 .meal{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line)}
@@ -515,7 +521,7 @@ function priceLine(usd){ // always USD + TZS, plus selected currency if differen
 const $=id=>document.getElementById(id);
 function escapeHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];});}
 function safeImgSrc(u){u=String(u==null?"":u);return (/^data:image\/(png|jpe?g|gif|webp);/i.test(u)||/^blob:/i.test(u)||/^https:\/\//i.test(u))?u:"";}
-function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),2200);}
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),Math.max(2800,Math.min(7000,String(msg).length*65)));}
 function setTheme(th){state.theme=th;document.body.setAttribute("data-theme",th);render();}
 function go(r){state.route=r;document.querySelector("main").scrollTop=0;render();}
 
@@ -1529,7 +1535,7 @@ const SUB_NETWORKS=[
   ["tigo","Mixx by Yas","#0033a0","Y","Tigo"],
   ["airtel","Airtel Money","#e2231a","A","Airtel"],
   ["mpesa","M-Pesa","#4caf50","M","Mpesa"],
-  ["halopesa","Halopesa","#f47c20","H","Halopesa"],
+  ["halopesa","HaloPesa","#f47c20","H","Halopesa"],
   ["azampesa","AzamPesa","#1b4f9c","Z","Azampesa"],
   ["selcom","Selcom Pesa","#0a3d91","S",null,true]
 ];
@@ -1537,7 +1543,14 @@ function subNetwork(){
  var n=SUB_NETWORKS.filter(function(x){return x[0]===state.pay.method;})[0]||SUB_NETWORKS[0];
  return {key:n[0],label:n[1],provider:n[4]};
 }
-function openPay(product){state.pay.open=true;state.pay.product=product;renderSheet();$("overlay").classList.add("show");}
+function openPay(product){
+ state.pay.open=true;state.pay.product=product;
+  // A payment that is still waiting is shown again instead of a fresh paywall, so a customer
+  // whose prompt is slow is not led into sending a second one on top of it.
+ if(_payWatch){ $("sheet").innerHTML=payStatusHTML(Object.assign({kind:_payWatch.last||"waiting"},_payWatch.info)); }
+ else renderSheet();
+ $("overlay").classList.add("show");
+}
 function closePay(){state.pay.open=false;$("overlay").classList.remove("show");}
 function payDef(product){
  if(product==="plan")return{prod:"plan",title:"Meal Plan",benefits:["Full personalised 7-day plan","Meal swaps & variety","Auto shopping list","Progress tracking","Plan refreshes every month"]};
@@ -1571,12 +1584,13 @@ function renderSheet(){
     +'</select>';
  html+='<label>'+escapeHtml(subNetwork().label)+' number</label><input id="pay_phone" placeholder="07XX XXX XXX" inputmode="tel" autocomplete="tel" value="'+escapeHtml(state.pay.phone||"")+'" oninput="state.pay.phone=this.value">';
  html+='<button class="btn" id="pay_btn" style="margin-top:14px" onclick="doPay()">Pay '+fmt("USD",usd)+' · '+fmt("TZS",usd)+'</button>';
+ html+='<div id="pay_err" role="alert" class="small" style="color:var(--bad);margin-top:8px;text-align:center;line-height:1.45"></div>';
  html+='<button class="btn ghost" style="margin-top:8px" onclick="closePay()">Cancel</button>';
  html+='<div class="small muted center" style="margin-top:8px">Mobile money is one payment per period, we\'ll remind you to renew. Cancel anytime.</div>';
   $("sheet").innerHTML=html;
 }
-function setMethod(m){state.pay.method=m;renderSheet();}
-function setCycle(c){state.pay.cycle=c;renderSheet();}
+function setMethod(m){if(_payInFlight)return;state.pay.method=m;renderSheet();}
+function setCycle(c){if(_payInFlight)return;state.pay.cycle=c;renderSheet();}
 function doPay(){
  if(cloudOn()){ if(!state.cloud||!state.cloud.token){ closePay(); openAuth("signup"); toast("Create an account to subscribe"); return; } cloudPay(); return; }
  applyTier(state.pay.product); // local/demo: grant cumulative access for this session
@@ -1744,7 +1758,7 @@ async function apiFetch(path, opts){
  var timer = ctrl ? setTimeout(function(){ try{ctrl.abort();}catch(e){} }, 25000) : null;
  var res;
  try { res = await fetch(API_BASE + path, Object.assign({}, opts, { headers: headers, signal: ctrl ? ctrl.signal : undefined })); }
- catch(err){ if (timer) clearTimeout(timer); throw new Error("Can't reach the server, it may be waking up. Wait ~30 seconds and try again."); }
+ catch(err){ if (timer) clearTimeout(timer); var ne = new Error("Can't reach the server, it may be waking up. Wait ~30 seconds and try again."); ne.network = true; throw ne; }
  if (timer) clearTimeout(timer);
  var data = {}; try { data = await res.json(); } catch(e){}
   // A token that has expired or been revoked answers 401 to everything. Keeping it meant the
@@ -1757,7 +1771,9 @@ async function apiFetch(path, opts){
  try{ saveState(); }catch(e){}
  throw new Error("Your session expired, please sign in again");
   }
- if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+  // Keep the whole answer on the error. A failed payment start can still carry an open order
+  // that has to be watched, and throwing only the message used to lose it.
+ if (!res.ok) { var he = new Error(data.error || ("HTTP " + res.status)); he.status = res.status; he.data = data; throw he; }
  return data;
 }
 async function cloudSignup(email, password, name){
@@ -1898,30 +1914,140 @@ async function cloudPay(){
  if (_payInFlight) return;
  var prod = state.pay.product;
  var phone = ((document.getElementById("pay_phone") || {}).value || "").trim();
- var network = subNetwork().provider;
- if (!network) { toast("Please choose another mobile network"); return; }
+  // Read the network once, before anything is awaited, so whatever the screen says afterwards
+  // names the network that was actually charged.
+ var sn = subNetwork();
+ if (!sn.provider) { toast("Please choose another mobile network"); return; }
  if (!phone) { toast("Enter your mobile number"); return; }
- var order;
  var cycle = (state.pay.cycle==="yr")?"yr":"mo";
- var btn = document.getElementById("pay_btn");
+ var d = payDef(prod);
+ var info = { net: sn.label, phone: phone, amount: fmt("TZS", price(d.prod, cycle)) };
+ var btn = document.getElementById("pay_btn"), sel = document.getElementById("pay_network");
  var btnLabel = btn ? btn.textContent : "";
+ var errEl = document.getElementById("pay_err"); if (errEl) errEl.textContent = "";
+ var order;
  _payInFlight = true;
  if (btn) { btn.disabled = true; btn.textContent = "Starting your payment\u2026"; }
- try { order = await apiFetch("/api/payments/checkout", { method:"POST", body: JSON.stringify({ product:prod, cycle:cycle, phone:phone, network:network }) }); }
- catch(e){ toast(e.message || "We could not start that payment"); return; }
- finally { _payInFlight = false; if (btn) { btn.disabled = false; btn.textContent = btnLabel; } }
- closePay(); toast("Approve the prompt on your phone…");
- var tries = 0;
- var iv = setInterval(async function(){
- tries++;
- try {
- var o = await apiFetch("/api/payments/orders/" + order.orderId);
- if (o.status === "paid") { clearInterval(iv); await refreshEntitlements(); render(); toast("Payment received, unlocked!"); }
- else if (o.status === "failed") { clearInterval(iv); toast("Payment failed or cancelled"); }
-    } catch(e){}
- if (tries > 30) clearInterval(iv);
-  }, 4000);
+ if (sel) sel.disabled = true;
+ try { order = await apiFetch("/api/payments/checkout", { method:"POST", body: JSON.stringify({ product:prod, cycle:cycle, phone:phone, network:sn.provider }) }); }
+ catch(e){
+ var data = (e && e.data) || {};
+    // The server keeps the order open when it cannot tell whether the prompt went out, for
+    // example a timeout from the network after the push. Saying "try again" then invites a
+    // second charge, so watch that order instead and say what is actually known.
+ if (data.pending && data.orderId) { startWatch(data.orderId, Object.assign({ uncertain: true }, info)); return; }
+ var m = (e && e.message) || "We could not start that payment";
+ if (e && e.network) {
+ m = "The connection dropped while starting the payment. If a PIN prompt reaches your phone, approve it and your plan unlocks by itself. If nothing arrives within a minute, try again.";
+ setTimeout(function(){ try { refreshEntitlements(); } catch(_){} }, 60000);
+    }
+ if (errEl) errEl.textContent = m;
+ toast(m); return;
+  }
+ finally { _payInFlight = false; if (btn) { btn.disabled = false; btn.textContent = btnLabel; } if (sel) sel.disabled = false; }
+ startWatch(order.orderId, info);
 }
+
+/* After a payment starts, the sheet stays open and says where it stands: the request that was
+   sent, then paid, not completed with the network's own reason (a balance that is too low, say),
+   or still waiting with a way to check again. It used to close at once, flash a message nobody
+   could read, and wait in silence.
+
+   There is only ever one watcher. Each one belongs to an order, and every screen it draws is
+   tagged with that order, so a late answer about an older payment can never be painted over
+   the screen of the one being made now. */
+var _payWatch = null;
+function startWatch(orderId, info){
+ if (_payWatch && _payWatch.iv) clearInterval(_payWatch.iv);
+ _payWatch = { orderId: orderId, last: "waiting", info: Object.assign({ orderId: orderId }, info) };
+ var open = document.getElementById("overlay").classList.contains("show");
+ if (open && document.getElementById("pay_btn")) $("sheet").innerHTML = payStatusHTML(Object.assign({ kind: "waiting" }, _payWatch.info));
+ else toast("Check your phone to approve the payment");
+ watchPayment();
+}
+function payStatusHTML(s){
+ var net = escapeHtml(s.net || "your network");
+ var h = '<div class="grab"></div><div id="pay_status" data-order="' + escapeHtml(s.orderId || "") + '"></div>';
+ if (s.kind === "waiting") {
+ h += '<div class="center" style="padding:12px 0 2px"><div class="pay-spin"></div></div>'
+      + '<div class="b center" style="font-size:18px">Check your phone</div>'
+      + '<div class="small muted center" style="margin:8px 0 14px;line-height:1.5">'
+      + (s.uncertain
+          ? 'We could not confirm the request with ' + net + '. If a PIN prompt for <b>' + escapeHtml(s.amount || "") + '</b> reaches <b>' + escapeHtml(s.phone || "") + '</b>, approve it and your plan unlocks by itself.'
+          : 'We sent a request for <b>' + escapeHtml(s.amount || "") + '</b> to <b>' + escapeHtml(s.phone || "") + '</b> on ' + net + '. Enter your ' + net + ' PIN on the prompt to pay.')
+      + '</div>'
+      + '<div class="note" style="text-align:left">No prompt after a minute? Check the number, close any open USSD menu, and make sure your ' + net + ' balance covers the amount.</div>'
+      + '<button class="btn ghost" style="margin-top:12px" onclick="closePay()">Close, I will wait</button>';
+  } else if (s.kind === "paid") {
+ h += '<div class="b center" style="font-size:18px;margin-top:12px">Payment received</div>'
+      + '<div class="small muted center" style="margin:8px 0 14px;line-height:1.5">Your plan is unlocked. Enjoy the full week.</div>'
+      + '<button class="btn" onclick="closePay();go(\'plan\')">See my plan</button>';
+  } else if (s.kind === "failed") {
+ h += '<div class="b center" style="font-size:18px;margin-top:12px">Payment not completed</div>'
+      + '<div class="center" style="margin:8px 0 16px;line-height:1.5;font-size:14px">' + escapeHtml(s.reason || "The payment was not completed. Please try again.") + '</div>'
+      + '<button class="btn" onclick="renderSheet()">Try again</button>'
+      + '<button class="btn ghost" style="margin-top:8px" onclick="closePay()">Close</button>';
+  } else {
+ h += '<div class="b center" style="font-size:18px;margin-top:12px">Still waiting for ' + net + '</div>'
+      + '<div class="small muted center" style="margin:8px 0 14px;line-height:1.5">We have not heard back yet. We will keep checking for the next half hour: if money left your account, your plan unlocks by itself as soon as ' + net + ' confirms.</div>'
+      + '<button class="btn" onclick="watchPayment()">Check again</button>'
+      + '<button class="btn ghost" style="margin-top:8px" onclick="renderSheet()">Try another network</button>'
+      + '<button class="btn ghost" style="margin-top:8px" onclick="closePay()">Close</button>';
+  }
+ return h;
+}
+function showPayStatus(s){
+ if (_payWatch && _payWatch.orderId === s.orderId) _payWatch.last = s.kind;
+ var open = document.getElementById("overlay").classList.contains("show");
+ var el = document.getElementById("pay_status");
+ if (open && el && el.getAttribute("data-order") === String(s.orderId)) { $("sheet").innerHTML = payStatusHTML(s); return; }
+ if (s.kind === "paid") toast("Payment received. Your plan is unlocked.");
+ else if (s.kind === "failed") toast(s.reason || "The payment was not completed.");
+ else if (s.kind === "slow") toast("Still waiting for " + (s.net || "your network") + " to confirm.");
+}
+function watchPayment(){
+ var w = _payWatch; if (!w) return;
+ clearInterval(w.iv); w.tries = 0; w.last = "waiting";
+ var el = document.getElementById("pay_status");
+ if (el && el.getAttribute("data-order") === String(w.orderId)) $("sheet").innerHTML = payStatusHTML(Object.assign({ kind: "waiting" }, w.info));
+ var tick = async function(){
+ if (_payWatch !== w) { clearInterval(w.iv); return; }
+ w.tries++;
+ try {
+ var o = await apiFetch("/api/payments/orders/" + w.orderId);
+ if (_payWatch !== w) { clearInterval(w.iv); return; }
+ if (o.status === "paid") {
+ clearInterval(w.iv); _payWatch = null;
+ await refreshEntitlements(); render();
+ showPayStatus(Object.assign({ kind: "paid" }, w.info)); return;
+      }
+ if (o.status === "failed") {
+ clearInterval(w.iv); _payWatch = null;
+ showPayStatus(Object.assign({ kind: "failed", reason: o.reason }, w.info)); return;
+      }
+    } catch(e){
+ if (e && e.status === 401) { clearInterval(w.iv); if (_payWatch === w) _payWatch = null; toast(e.message); return; }
+    }
+    // After about ninety seconds with no answer, say so and offer another network, but keep
+    // checking quietly for half an hour: a confirmation can arrive late, and the screen says
+    // the plan unlocks by itself when it does.
+ if (w.tries === 23) {
+ showPayStatus(Object.assign({ kind: "slow" }, w.info));
+ clearInterval(w.iv); w.iv = setInterval(tick, 15000);
+    } else if (w.tries > 23 + 120) {
+ clearInterval(w.iv);
+    }
+  };
+ w.iv = setInterval(tick, 4000);
+}
+// Coming back to the app, usually straight after approving the prompt on the same phone: check
+// now instead of waiting for the next tick, and pick up a payment that settled after the
+// watcher had already stopped.
+document.addEventListener("visibilitychange", function(){
+ if (document.hidden) return;
+ if (_payWatch) { try { watchPayment(); } catch(e){} }
+ else if (cloudOn() && state.cloud && state.cloud.token && !state.planUnlocked) { try { refreshEntitlements(); } catch(e){} }
+});
 
 /* ---------- ROUTER ---------- */
 function render(){
