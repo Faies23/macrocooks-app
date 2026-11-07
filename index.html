@@ -734,6 +734,16 @@ function foodLogCard(){
 }
 
 function planLoading(){
+  // The plan is built on the server, so it needs an account. Someone who answered the setup
+  // questions before creating one used to land on "We could not load your plan" with a Try
+  // again button that could never succeed, and no way to sign in from there.
+ if(cloudOn() && !(state.cloud && state.cloud.token)){
+ return '<div class="card center" style="margin-top:24px"><div style="font-size:30px">\ud83c\udf73</div>'
+    +'<div class="b" style="font-size:17px;margin-top:6px">Your plan is one step away</div>'
+    +'<div class="small muted" style="margin:6px 0 12px">Create a free account and we will build your personal meal plan straight away.</div>'
+    +'<button class="btn" onclick="openAuth(\'signup\')">Create free account</button>'
+    +'<button class="btn ghost" style="margin-top:8px" onclick="openAuth(\'login\')">I already have an account</button></div>';
+  }
  var err=state.planError||"";
  return '<div class="card center" style="margin-top:24px"><div style="font-size:30px">\ud83c\udf73</div>'
     +'<div class="b" style="font-size:17px;margin-top:6px">'+(err?"We could not load your plan":"Building your plan")+'</div>'
@@ -1512,10 +1522,16 @@ const PAY_METHODS=[
    has not switched it on for this account; the server answers with a plain message telling
    the customer to pick another network, and the day it is switched on it simply works,
    with no new release of the app. */
+// A sixth value of true marks a network AzamPay cannot charge. It is listed so customers can
+// see it is planned, but it cannot be chosen: AzamPay answers "Invalid request data" for
+// Selcom (tested against the live server on 7 Nov 2026), so offering it would fail every time.
 const SUB_NETWORKS=[
   ["tigo","Mixx by Yas","#0033a0","Y","Tigo"],
   ["airtel","Airtel Money","#e2231a","A","Airtel"],
-  ["mpesa","M-Pesa","#4caf50","M","Mpesa"]
+  ["mpesa","M-Pesa","#4caf50","M","Mpesa"],
+  ["halopesa","Halopesa","#f47c20","H","Halopesa"],
+  ["azampesa","AzamPesa","#1b4f9c","Z","Azampesa"],
+  ["selcom","Selcom Pesa","#0a3d91","S",null,true]
 ];
 function subNetwork(){
  var n=SUB_NETWORKS.filter(function(x){return x[0]===state.pay.method;})[0]||SUB_NETWORKS[0];
@@ -1548,8 +1564,11 @@ function renderSheet(){
   // actually sent: a customer who tapped Mixx by Yas was still billed through M-Pesa. Tapping
   // a tile also redrew the sheet and wiped the number they had typed. Selcom was listed too,
   // though AzamPay does not collect through it.
- if(!SUB_NETWORKS.some(function(n){return n[0]===state.pay.method;})) state.pay.method=SUB_NETWORKS[0][0];
- html+='<div class="pay-grid">'+SUB_NETWORKS.map(function(m){return '<div class="pay-opt '+(state.pay.method===m[0]?"on":"")+'" onclick="setMethod(\''+m[0]+'\')"><div class="mm" style="background:'+m[2]+'">'+m[3]+'</div>'+m[1]+'</div>';}).join("")+'</div>';
+ if(!SUB_NETWORKS.some(function(n){return n[0]===state.pay.method && !n[5];})) state.pay.method=SUB_NETWORKS[0][0];
+  // One control, so the network shown can never differ from the network charged.
+ html+='<select id="pay_network" aria-label="Mobile network" onchange="setMethod(this.value)">'
+    +SUB_NETWORKS.map(function(m){return '<option value="'+m[0]+'"'+(state.pay.method===m[0]?' selected':'')+(m[5]?' disabled':'')+'>'+escapeHtml(m[1])+(m[5]?' (coming soon)':'')+'</option>';}).join("")
+    +'</select>';
  html+='<label>'+escapeHtml(subNetwork().label)+' number</label><input id="pay_phone" placeholder="07XX XXX XXX" inputmode="tel" autocomplete="tel" value="'+escapeHtml(state.pay.phone||"")+'" oninput="state.pay.phone=this.value">';
  html+='<button class="btn" id="pay_btn" style="margin-top:14px" onclick="doPay()">Pay '+fmt("USD",usd)+' · '+fmt("TZS",usd)+'</button>';
  html+='<button class="btn ghost" style="margin-top:8px" onclick="closePay()">Cancel</button>';
@@ -1616,8 +1635,10 @@ const Store={KEY:"macrocooks_v1",mem:null,
  read(){try{const s=localStorage.getItem(this.KEY);return s?JSON.parse(s):this.mem;}catch(e){return this.mem;}},
  write(o){try{localStorage.setItem(this.KEY,JSON.stringify(o));this.mem=null;}catch(e){this.mem=o;try{if(!this._warned){this._warned=true;if(typeof toast==="function")toast("Storage full, recent changes may not be saved. Remove a photo");}}catch(_){}}},
  clear(){try{localStorage.removeItem(this.KEY);}catch(e){}this.mem=null;}};
-function saveState(){const s=Object.assign({},state);s.pay={open:false,product:null,method:state.pay.method,cycle:"monthly"};s._canInstall=false;Store.write(s);try{pushProfileDebounced();}catch(e){}}
-function loadState(){const s=Store.read();if(s){state=Object.assign(state,s);state.pay={open:false,product:null,method:(s.pay&&s.pay.method)||"mpesa",cycle:"monthly"};state._canInstall=false;}
+function saveState(){const s=Object.assign({},state);s.pay={open:false,product:null,method:state.pay.method,v:2,cycle:"monthly"};s._canInstall=false;Store.write(s);try{pushProfileDebounced();}catch(e){}}
+/* Saved payment network: earlier versions stored "mpesa" for everyone because it was the default,
+   not a choice, so only a value saved with v:2 (this version onwards) is trusted. */
+function loadState(){const s=Store.read();if(s){state=Object.assign(state,s);state.pay={open:false,product:null,method:(s.pay&&s.pay.v===2&&s.pay.method)||"tigo",cycle:"monthly"};state._canInstall=false;}
  if(!state.profile.conditions)state.profile.conditions=[];
  if(!state.profile.country)state.profile.country="TZ";
  if(!state.photos)state.photos={before:"",after:""};
@@ -1692,7 +1713,14 @@ function finishOnboard(){
  state.onboardComplete=true;
  state.route="home";
  render();
- toast(returning?"Profile & plan updated ✓":"Your plan is ready 🎉");
+ if(cloudOn() && !(state.cloud && state.cloud.token)){
+    // Ask for the free account now, while the customer is still in the flow. The plan cannot
+    // be built without it, and saying "Your plan is ready" here was not true.
+ openAuth("signup");
+ toast("Create a free account to see your plan");
+  } else {
+ toast(returning?"Profile and plan updated":"Your plan is ready");
+  }
 }
 function resetAll(){if(confirm("Sign out and erase all your data on this device?")){Store.clear();location.reload();}}
 
@@ -1871,6 +1899,7 @@ async function cloudPay(){
  var prod = state.pay.product;
  var phone = ((document.getElementById("pay_phone") || {}).value || "").trim();
  var network = subNetwork().provider;
+ if (!network) { toast("Please choose another mobile network"); return; }
  if (!phone) { toast("Enter your mobile number"); return; }
  var order;
  var cycle = (state.pay.cycle==="yr")?"yr":"mo";
