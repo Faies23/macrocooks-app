@@ -109,6 +109,18 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .toast{position:absolute;left:50%;bottom:84px;transform:translateX(-50%) translateY(20px);background:#2a201d;color:#fff;border:1px solid rgba(255,255,255,.16);box-shadow:0 8px 24px rgba(0,0,0,.28);padding:11px 18px;border-radius:18px;font-size:13px;font-weight:700;line-height:1.4;text-align:center;opacity:0;transition:.3s;pointer-events:none;z-index:90;white-space:normal;width:max-content;max-width:86%}
 .pay-spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);margin:0 auto 10px;animation:spin .9s linear infinite}
 @media (prefers-reduced-motion: reduce){.pay-spin{animation:none}}
+.lang-opt{display:flex;justify-content:space-between;align-items:center;width:100%;padding:14px 16px;margin:0 0 8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.lang-opt.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.lang-tick{color:var(--accent);font-weight:800}
+/* Arabic and Hindi need fonts that carry their scripts; the brand fonts do not. */
+html[lang="ar"] body, html[lang="ar"] body *{font-family:'IBM Plex Sans Arabic','Noto Sans Arabic',Tahoma,'Segoe UI',sans-serif !important}
+html[lang="hi"] body, html[lang="hi"] body *{font-family:'Noto Sans Devanagari','Mukta','Nirmala UI',sans-serif !important}
+html[lang="ar"] body{line-height:1.55}
+/* Right to left: flex rows and text flip on their own; these are the places fixed to one side. */
+[dir="rtl"] [style*="text-align:left"], [dir="rtl"] .note{text-align:right !important}
+[dir="rtl"] .pcard .padd{right:auto;left:8px}
+[dir="rtl"] .pcard .pout{left:auto;right:8px}
+[dir="rtl"] input[inputmode="tel"], [dir="rtl"] input[type="tel"], [dir="rtl"] input[type="email"], [dir="rtl"] input[type="password"]{direction:ltr;text-align:right}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* meal item */
 .meal{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line)}
@@ -544,6 +556,7 @@ function renderChrome(){
     '<div class="brand">'+logoSVG(26)+'</div>'
     +'<div class="hdr-actions">'
     +(state._canInstall?'<button class="chip-btn" onclick="doInstall()">App</button>':'')
+    +langButton()
     +'<button class="chip-btn" type="button" onclick="cycleTheme()">Theme: '+themeLabel()+'</button>'
     +'<button class="chip-btn" onclick="go(\'settings\')">'+state.currency+'</button>'
     +'</div>';
@@ -573,6 +586,7 @@ function cycleTheme(){ var o=["auto","white","dark"]; setThemeMode(o[(o.indexOf(
 function screenWelcome(){
  var signedIn = state.cloud && state.cloud.token;
  return '<div class="wel-top">'
+    +langButton()
     +'<button class="chip-btn" type="button" onclick="cycleTheme()">Theme: '+themeLabel()+'</button>'
     +'<button class="chip-btn" onclick="go(\'settings\')">Settings</button>'
     +'</div>'
@@ -1342,7 +1356,15 @@ function weightChart(){
 }
 
 /* ---------- LEGAL / CONTACT ---------- */
-function openLegal(k){ $("sheet").innerHTML=legalHTML(k); state.pay.open=true; $("overlay").classList.add("show"); }
+function openLegal(k){
+  $("sheet").innerHTML=legalHTML(k);
+ if(I18N.lang!=="en"){
+ var d=document.createElement("div"); d.className="note"; d.style.margin="0 0 12px";
+ d.textContent="This is a translation. If it differs from the English version, the English version applies.";
+ var g=$("sheet").querySelector(".grab"); if(g&&g.nextSibling) $("sheet").insertBefore(d,g.nextSibling); else $("sheet").prepend(d);
+  }
+ state.pay.open=true; $("overlay").classList.add("show");
+}
 function legalHTML(k){
  var L=LEGAL, e=escapeHtml;
  var H=function(t){ return '<div class="grab"></div><div class="b" style="font-size:19px">'+t+'</div><div class="small muted" style="margin:2px 0 12px">'+e(L.company)+' (trading as '+e(L.brand)+') &middot; Effective '+e(L.effective)+'</div>'; };
@@ -1453,6 +1475,7 @@ function screenCommunity(){
 }
 function screenSettings(){
  let html='<h1>Settings ⚙️</h1>';
+ html+='<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="b">Language</div><div class="small muted" translate="no">'+langInfo(I18N.lang).name+'</div></div><button class="btn sm" style="width:auto" onclick="openLangSheet()">Change</button></div>';
  html+='<div class="card"><div class="b" style="margin-bottom:6px">Appearance</div><div class="small muted">Pick your theme</div>'
     +'<div class="tprev">'
     +'<div class="sw '+(state.theme==="noir"?"on":"")+'" onclick="setTheme(\'noir\')" style="background:linear-gradient(135deg,#f4d58a,#e8b84b 55%,#c8821f);color:#2a1c06">✦ Noir Gold</div>'
@@ -1464,7 +1487,7 @@ function screenSettings(){
  html+='<div class="card"><div class="b" style="margin-bottom:6px">Currency</div><div class="small muted">Prices show in your currency (and always USD + TZS at checkout).</div>'
     +'<select onchange="setCurrency(this.value)" style="margin-top:8px">'
     +CURRENCIES.map(c=>'<option value="'+c[0]+'" '+(state.currency===c[0]?"selected":"")+'>'+c[0]+' · '+c[1]+'</option>').join("")
-    +'</select><div class="small muted" style="margin-top:6px">Showing '+CURRENCIES.length+' currencies · full ISO-4217 list in production.</div></div>';
+    +'</select></div>';
 
  html+='<div class="card"><div class="b" style="margin-bottom:6px">Country</div><div class="small muted">Used to localise foods and recommendations.</div>'
     +'<select onchange="state.profile.country=this.value;render()" style="margin-top:8px">'
@@ -2049,8 +2072,213 @@ document.addEventListener("visibilitychange", function(){
  else if (cloudOn() && state.cloud && state.cloud.token && !state.planUnlocked) { try { refreshEntitlements(); } catch(e){} }
 });
 
+/* ---------- LANGUAGES ----------
+   The app is written in English. Every text it can show was catalogued, translated by meaning
+   rather than word for word, and reviewed by a native-level editor; each language file maps the
+   English to its translation. A watcher translates whatever the app draws, so screens, sheets and
+   messages need no changes of their own. Templates carry the parts that vary (a number, a name, a
+   network), which keep their place wherever the translated sentence needs them. */
+var LANGUAGES=[
+ {code:"en",name:"English",short:"EN"},
+ {code:"sw",name:"Kiswahili",short:"SW"},
+ {code:"ar",name:"\u0627\u0644\u0639\u0631\u0628\u064a\u0629",short:"\u0639",rtl:true},
+ {code:"hi",name:"\u0939\u093f\u0928\u094d\u0926\u0940",short:"\u0939\u093f"},
+ {code:"fr",name:"Fran\u00e7ais",short:"FR"},
+ {code:"es",name:"Espa\u00f1ol",short:"ES"}
+];
+var I18N_VERSION="1";
+var I18N={lang:"en",exact:new Map(),mixed:new Map(),pats:[],mpats:[],busy:false,obs:null};
+// A sentence translated as a whole is remembered here with what it became. Its pieces must never be
+// translated again one by one: translators sometimes keep a phrase in English on purpose (the
+// iPhone's own "Add to Home Screen" label), and re-reading the pieces would mangle it.
+var I18N_DONE=new WeakMap();
+var I18N_NUM="([\\d\u00bd\u00bc\u00be\u2153\u2154][\\d.,\u00bd\u00bc\u00be\u2153\u2154]*)";
+var I18N_INLINE={B:1,STRONG:1,I:1,EM:1,U:1,SMALL:1,SPAN:1,A:1,BR:1,SUP:1,SUB:1,CODE:1};
+function langInfo(c){ return LANGUAGES.filter(function(l){return l.code===c;})[0]||LANGUAGES[0]; }
+function i18nNorm(v){ return String(v).replace(/\s+/g," ").trim(); }
+function i18nCompile(en,anyText){
+ var names=[];
+ var re=en.replace(/[.*+?^${}()|[\]\\]/g,"\\$&").replace(/\\\{(\w+)\\\}/g,function(_,k){ names.push(k); return (!anyText&&/^\d+$/.test(k))?I18N_NUM:"(.+?)"; });
+ return {re:new RegExp("^"+re+"$"),names:names};
+}
+function i18nInstall(code,data){
+ I18N.lang=code; I18N.exact=new Map(); I18N.mixed=new Map(); I18N.pats=[]; I18N.mpats=[];
+ if(code==="en"||!data) return;
+  // entry: [english, translation, flags]; "m" = sentence with inline tags, "a" = its {0} slots
+  // hold any text (a product, a name), not only a number
+ (data.entries||[]).forEach(function(e){
+ var en=e[0], tr=e[1], f=e[2]||"", mixed=f.indexOf("m")>=0;
+ if(!tr) return;
+ if(/\{\w+\}/.test(en)){ var c=i18nCompile(en,f.indexOf("a")>=0); c.tr=tr; c.len=en.length; (mixed?I18N.mpats:I18N.pats).push(c); }
+ else (mixed?I18N.mixed:I18N.exact).set(en,tr);
+  });
+ I18N.pats.sort(function(a,b){return b.len-a.len;}); I18N.mpats.sort(function(a,b){return b.len-a.len;});
+}
+var I18N_PRODUCTS=null;
+function i18nSlotsOk(names,caps){
+ var i=names.indexOf("product"); if(i<0) return true;
+ if(!I18N_PRODUCTS){ I18N_PRODUCTS=new Set((typeof SHOP!=="undefined"?SHOP:[]).map(function(p){return p.n;})); }
+ return I18N_PRODUCTS.has(caps[i]);
+}
+function i18nFill(tr,names,caps){
+ return tr.replace(/\{(\w+)\}/g,function(all,k){ var i=names.indexOf(k); return i<0?all:T(caps[i]); });
+}
+// Translate one string. Unknown text (a product name, a person's name, a number) is returned as is.
+function T(v){
+ if(I18N.lang==="en"||v==null) return v;
+ var raw=String(v), k=i18nNorm(raw); if(!k) return raw;
+ var hit=I18N.exact.get(k); if(hit!=null) return hit;
+ for(var i=0;i<I18N.pats.length;i++){ var p=I18N.pats[i], m=k.match(p.re); if(m&&i18nSlotsOk(p.names,m.slice(1))) return i18nFill(p.tr,p.names,m.slice(1)); }
+  // a meal line, "Food (portion) · Food (portion)": translated piece by piece, so every
+  // combination the plan can produce reads correctly
+ if(k.indexOf("(")>=0||k.indexOf(" \u00b7 ")>=0){
+ var parts=k.split(" \u00b7 "), out=[], good=true;
+ for(var j=0;j<parts.length&&good;j++){
+ var whole=I18N.exact.get(parts[j]); if(whole){ out.push(whole); continue; }
+ var pm=parts[j].match(/^(.+) \(([^()]*)\)$/), fn=pm&&I18N.exact.get(pm[1]);
+ if(fn){ out.push(fn+" ("+T(pm[2])+")"); } else good=false;
+      }
+ if(good&&out.length) return out.join(" \u00b7 ");
+  }
+  // a leading emoji before known text: "\ud83c\udf5a Ugali (maize)"
+ var em=k.match(/^(\p{Extended_Pictographic}\uFE0F?\s+)(.+)$/u);
+ if(em){ var r=T(em[2]); if(r!==em[2]) return em[1]+r; }
+ return raw;
+}
+// In right-to-left text a mixed number like "1½" is reordered by the browser and shows as
+// "½1". Wrapping it in an invisible left-to-right isolate keeps the digits in reading order.
+function i18nBidi(s){
+ return s.replace(/(⁦)?(\d+(?:[.,]\d+)?[½¼¾⅓⅔])/g,function(all,iso,num){ return iso?all:"⁦"+num+"⁩"; });
+}
+function i18nMixed(el){
+ var html=el.innerHTML, key=i18nNorm(html.replace(/<(\w+)[^>]*>/g,"<$1>"));
+ var tr=I18N.mixed.get(key);
+ if(tr==null){ for(var i=0;i<I18N.mpats.length;i++){ var p=I18N.mpats[i], m=key.match(p.re); if(m){ tr=i18nFill(p.tr,p.names,m.slice(1)); break; } } }
+ if(tr==null) return false;
+  // put each tag's own attributes back (an onclick, a class), matched by tag name in order
+ var opens={}, used={};
+ html.replace(/<(\w+)([^>]*)>/g,function(all,t){ (opens[t]=opens[t]||[]).push(all); return all; });
+ el.innerHTML=tr.replace(/<(\w+)>/g,function(all,t){ var n=used[t]=(used[t]||0); used[t]++; return (opens[t]&&opens[t][n])||all; });
+ I18N_DONE.set(el,el.innerHTML);
+ return true;
+}
+function i18nIsMixed(el){
+ if(!el.children.length) return false;
+ for(var i=0;i<el.children.length;i++){ var c=el.children[i]; if(!I18N_INLINE[c.tagName]||c.children.length) return false; }
+ var txt=false, inl=false;
+ el.childNodes.forEach(function(n){ if(n.nodeType===3&&/[A-Za-z]/.test(n.nodeValue)) txt=true; if(n.nodeType===1&&n.tagName!=="BR"&&/\S/.test(n.textContent)) inl=true; });
+ return txt&&inl;
+}
+function i18nTree(root){
+ if(I18N.lang==="en"||!root||root.nodeType!==1) return;
+ if(root.closest&&root.closest('svg,script,style,textarea,[translate="no"]')) return;
+ var done=[];
+ var mine=function(el){ return I18N_DONE.get(el)===el.innerHTML; };
+ [root].concat([].slice.call(root.querySelectorAll("*"))).forEach(function(el){
+ if(mine(el)){ done.push(el); return; }
+ if(el.closest('svg,[translate="no"]')) return;
+ for(var d=0;d<done.length;d++) if(done[d].contains(el)) return;
+ if(i18nIsMixed(el)&&i18nMixed(el)) done.push(el);
+  });
+ var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT), n;
+ var inDone=function(node){ for(var d=0;d<done.length;d++) if(done[d].contains(node)) return true; return false; };
+ var rtl=!!langInfo(I18N.lang).rtl;
+ while((n=w.nextNode())){
+ var pe=n.parentElement; if(!pe||pe.closest('svg,script,style,textarea,[translate="no"]')) continue;
+ if(inDone(n)) continue;
+ var v=n.nodeValue, lat=/[A-Za-z]/.test(v);
+ if(!lat&&!(rtl&&/\d[½¼¾⅓⅔]/.test(v))) continue;
+ var t=lat?T(v):v;
+ if(t!==v) t=(v.match(/^\s*/)[0])+t+(v.match(/\s*$/)[0]);
+ if(rtl) t=i18nBidi(t);
+ if(t!==v) n.nodeValue=t;
+  }
+ root.querySelectorAll("[placeholder],[aria-label],[title],[alt]").forEach(function(el){
+ ["placeholder","aria-label","title","alt"].forEach(function(a){ var v=el.getAttribute(a); if(v&&/[A-Za-z]/.test(v)){ var t=T(v); if(t!==v) el.setAttribute(a,t); } });
+  });
+}
+function i18nObserve(){
+ if(I18N.obs||!window.MutationObserver) return;
+ I18N.obs=new MutationObserver(function(muts){
+ if(I18N.lang==="en"||I18N.busy) return;
+ I18N.busy=true;
+ try{
+ var roots=[];
+ muts.forEach(function(m){ var r=m.type==="characterData"?m.target.parentElement:m.target; if(r&&roots.indexOf(r)<0) roots.push(r); });
+ roots.forEach(function(r){ if(r.isConnected&&!roots.some(function(o){return o!==r&&o.contains(r);})) i18nTree(r); });
+    } finally { I18N.obs.takeRecords(); I18N.busy=false; }
+  });
+ I18N.obs.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["placeholder","aria-label","title","alt"]});
+}
+function i18nFont(code){
+ var url={ar:"https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap",
+          hi:"https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap"}[code];
+ if(!url||document.querySelector('link[data-font="'+code+'"]')) return;
+ var l=document.createElement("link"); l.rel="stylesheet"; l.href=url; l.setAttribute("data-font",code); document.head.appendChild(l);
+}
+function i18nChrome(){
+ var L=langInfo(I18N.lang);
+ document.documentElement.lang=L.code;
+ document.documentElement.dir=L.rtl?"rtl":"ltr";
+ i18nFont(L.code);
+}
+function i18nCached(code){
+ try{ return JSON.parse(localStorage.getItem("mc_i18n_"+code+"_v"+I18N_VERSION)||"null"); }catch(e){ return null; }
+}
+function loadLang(code,done,quiet){
+ if(code==="en"){ i18nInstall("en"); done&&done(); return; }
+ var cached=i18nCached(code);
+ if(cached){ i18nInstall(code,cached); done&&done(); return; }
+ fetch("i18n/"+code+".json?v="+I18N_VERSION).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+  .then(function(data){
+ try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf("mc_i18n_")===0) localStorage.removeItem(k); }); localStorage.setItem("mc_i18n_"+code+"_v"+I18N_VERSION,JSON.stringify(data)); }catch(e){}
+ i18nInstall(code,data); done&&done();
+    })
+  .catch(function(){ i18nInstall("en"); done&&done(); if(!quiet) toast("Could not load that language. Check your connection and try again."); });
+}
+function setLang(code){
+ state.lang=langInfo(code).code; try{ saveState(); }catch(e){}
+ closePay();
+ loadLang(state.lang,function(){ i18nChrome(); render(); i18nTree(document.body); });
+}
+function openLangSheet(){
+ var cur=I18N.lang;
+ var h='<div class="grab"></div><div class="b" style="font-size:18px;margin-bottom:12px">Choose your language</div>'
+    +LANGUAGES.map(function(l){ return '<button type="button" class="lang-opt'+(l.code===cur?' on':'')+'" translate="no" lang="'+l.code+'" dir="'+(l.rtl?'rtl':'ltr')+'" onclick="setLang(\''+l.code+'\')"><span>'+l.name+'</span>'+(l.code===cur?'<span class="lang-tick">\u2713</span>':'')+'</button>'; }).join("")
+    +'<button class="btn ghost" style="margin-top:8px" onclick="closePay()">Cancel</button>';
+  $("sheet").innerHTML=h; state.pay.open=true; $("overlay").classList.add("show");
+}
+function langButton(){
+ return '<button class="chip-btn" type="button" translate="no" aria-label="Language" onclick="openLangSheet()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="vertical-align:-2px;margin-inline-end:5px"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9s1.3-6.4 3.8-9z"/></svg>'+langInfo(I18N.lang).short+'</button>';
+}
+// The language is chosen once and remembered. Until then, the phone's own language is used when the
+// app speaks it, so a phone set to Kiswahili opens in Kiswahili.
+function initLang(){
+ var c=state.lang;
+ if(!c){ var nav=String((navigator.languages&&navigator.languages[0])||navigator.language||"en").toLowerCase().slice(0,2); c=LANGUAGES.some(function(l){return l.code===nav;})?nav:"en"; }
+ i18nObserve();
+ if(c==="en"){ i18nChrome(); return; }
+ var cached=i18nCached(c);
+ if(cached){ i18nInstall(c,cached); i18nChrome(); i18nTree(document.body); }
+ else loadLang(c,function(){ i18nChrome(); render(); i18nTree(document.body); },true);
+}
+(function(){
+ var c0=window.confirm, p0=window.prompt;
+ window.confirm=function(m){ return c0.call(window,T(m)); };
+ window.prompt=function(m,d){ return p0.call(window,T(m),d); };
+})();
+
 /* ---------- ROUTER ---------- */
 function render(){
+  // A profile restored from the server or saved by an older version can lack these fields: the
+  // Progress screen read supplements.length straight off it and crashed, and the water and sleep
+  // cards printed "NaN/8" and "undefinedh".
+ var _pf=state.profile;
+ if(_pf){
+ ["supplements","conditions","favs"].forEach(function(k){ if(!Array.isArray(_pf[k])) _pf[k]=[]; });
+ if(!isFinite(Number(_pf.water))) _pf.water=5;
+ if(!isFinite(Number(_pf.sleep))) _pf.sleep=6.5;
+  }
  renderChrome();
  const map={welcome:screenWelcome,onboard:screenOnboard,home:screenHome,plan:screenPlan,shop:screenShop,learn:screenLearn,progress:screenProgress,settings:screenSettings,community:screenCommunity,admin:screenAdmin};
  var html;
@@ -2086,10 +2314,13 @@ registerSW(); setupInstall(); if(cloudOn()){try{fetch(API_BASE,{mode:"no-cors"})
  if(state.onboardComplete && state.plan && state.targets){ state.route = tabs.indexOf(state.route)>=0 ? state.route : "home"; }
  else { state.route="welcome"; }
 })();
+initLang();
 maybeRefreshMonthlyPlan();
 if(securityOn() && !state._unlocked){ showLock(); } else { render(); }
 if(state._monthlyRefreshed){ state._monthlyRefreshed=false; setTimeout(function(){ try{toast("Your meal plan refreshed for the new month");}catch(e){} }, 2000); }
-if(cloudOn() && state.cloud && state.cloud.token){ try{ refreshEntitlements(); pullProfile().then(function(){ render(); }); }catch(e){} }
+// Redraw whether the profile came back or not: an expired session clears the token inside apiFetch,
+// and without a redraw the screen went on showing the customer as signed in.
+if(cloudOn() && state.cloud && state.cloud.token){ try{ refreshEntitlements(); pullProfile().then(function(){ render(); }, function(){ render(); }); }catch(e){} }
 </script>
 </body>
 </html>

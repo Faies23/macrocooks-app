@@ -1,5 +1,5 @@
 /* Macro Cooks service worker — network-first for the app shell, cache fallback offline */
-const CACHE = "macrocooks-v8";
+const CACHE = "macrocooks-v9";
 const SHELL = ["./", "./manifest.webmanifest", "./icon-512.svg", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", function (e) {
