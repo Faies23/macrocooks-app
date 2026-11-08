@@ -384,8 +384,8 @@ const FOODS = [
   {n:"Boiled eggs (2)",e:"🥚",kcal:155,p:13,c:1,f:11,tag:["egg","bf"]},
   /* Plant proteins / legumes */
   {n:"Maharage (kidney beans)",e:"🫘",kcal:245,p:15,c:45,f:1,tag:["plantpro","carb","ea"]},
-  {n:"Lentils (dengu)",e:"🫘",kcal:230,p:18,c:40,f:1,tag:["plantpro","carb"]},
-  {n:"Chickpeas (mbaazi)",e:"🫘",kcal:269,p:15,c:45,f:4,tag:["plantpro","carb","ea"]},
+  {n:"Lentils (adesi)",al:"dal masoor",e:"🫘",kcal:230,p:18,c:40,f:1,tag:["plantpro","carb"]},
+  {n:"Chickpeas (dengu)",al:"chana",e:"🫘",kcal:269,p:15,c:45,f:4,tag:["plantpro","carb","ea"]},
   {n:"Cowpeas (kunde)",e:"🫘",kcal:200,p:13,c:35,f:1,tag:["plantpro","carb","ea"]},
   {n:"Tofu",e:"⬜",kcal:144,p:15,c:3,f:9,tag:["plantpro"]},
   /* Dairy */
@@ -398,7 +398,7 @@ const FOODS = [
   {n:"Pumpkin leaves (majani ya maboga)",e:"🥬",kcal:40,p:4,c:7,f:1,tag:["veg","ea"]},
   {n:"Jute mallow (mlenda)",e:"🥬",kcal:38,p:5,c:6,f:0,tag:["veg","ea"]},
   {n:"Okra (bamia)",e:"🌿",kcal:33,p:2,c:7,f:0,tag:["veg","ea"]},
-  {n:"African eggplant (ngogwe)",e:"🍆",kcal:35,p:1,c:8,f:0,tag:["veg","ea"]},
+  {n:"African eggplant (nyanya chungu)",al:"ngogwe",e:"🍆",kcal:35,p:1,c:8,f:0,tag:["veg","ea"]},
   {n:"Pumpkin (maboga)",e:"🎃",kcal:49,p:2,c:12,f:0,tag:["veg","ea"]},
   {n:"Cabbage (kabichi)",e:"🥬",kcal:50,p:3,c:11,f:0,tag:["veg"]},
   {n:"Green beans",e:"🫛",kcal:44,p:2,c:10,f:0,tag:["veg"]},
@@ -418,24 +418,24 @@ const FOODS = [
   {n:"Cashews (korosho)",e:"🥜",kcal:160,p:5,c:9,f:13,tag:["snack","fat","ea"]},
   {n:"Almonds",e:"🌰",kcal:164,p:6,c:6,f:14,tag:["snack","fat"]},
   {n:"Roasted maize (mahindi)",e:"🌽",kcal:130,p:4,c:27,f:2,tag:["snack","ea"]},
-  {n:"Mandazi",e:"🍩",kcal:200,p:4,c:30,f:7,tag:["snack","ea"]}
+  {n:"Maandazi",al:"mandazi andazi",e:"🍩",kcal:200,p:4,c:30,f:7,tag:["snack","ea"]}
 ];
 function limitedFoods(){var s={};(state.profile.conditions||[]).forEach(function(cid){var c=CONDITIONS.find(function(x){return x.id===cid;});if(c)c.limit.forEach(function(n){s[n]=1;});});return s;}
-const HIGH_GI=/wali|white rice|ugali|maize|white bread|mandazi|chapati|plantain|cassava|muhogo/i;
+const HIGH_GI=/wali|white rice|ugali|maize|white bread|andazi|chapati|plantain|cassava|muhogo/i;
 const CONDITIONS=[
-  {id:"diabetes",label:"Type 2 diabetes",carbControl:true,limit:["Mandazi","Wali (rice)","Mango (embe)","Pineapple (nanasi)","Watermelon (tikiti)"],
+  {id:"diabetes",label:"Type 2 diabetes",carbControl:true,limit:["Maandazi","Wali (rice)","Mango (embe)","Pineapple (nanasi)","Watermelon (tikiti)"],
  tip:"Your plan is tuned for steady blood sugar: low-GI carbs (brown rice, millet, beans, sweet potato), more lean protein and healthy fats, and less sugar & refined starch.",
  adj:"Low-GI carbs · more protein · less sugar"},
-  {id:"pcos",label:"PCOS",carbControl:true,limit:["Mandazi","Wali (rice)","Pineapple (nanasi)","Watermelon (tikiti)"],
+  {id:"pcos",label:"PCOS",carbControl:true,limit:["Maandazi","Wali (rice)","Pineapple (nanasi)","Watermelon (tikiti)"],
  tip:"PCOS responds to insulin-friendly eating: your plan favours low-GI carbs, lean protein and healthy fats (avocado, fish, nuts) with less sugar & refined carbs to support steady energy and hormone balance.",
  adj:"Insulin-friendly · low-GI · balanced fats"},
-  {id:"hypertension",label:"High blood pressure",lowSodium:true,limit:["Mandazi","Chapati","Dagaa (sardines)"],
+  {id:"hypertension",label:"High blood pressure",lowSodium:true,limit:["Maandazi","Chapati","Dagaa (sardines)"],
  tip:"DASH-style: less salt and fried/processed food, more fruit, vegetables and whole grains.",
  adj:"Lower salt · more veg & whole grains"},
-  {id:"ulcers",label:"Stomach ulcers",gentle:true,limit:["Mandazi","Chapati","Orange (chungwa)","Pineapple (nanasi)","Kachumbari (tomato & onion)"],
+  {id:"ulcers",label:"Stomach ulcers",gentle:true,limit:["Maandazi","Chapati","Orange (chungwa)","Pineapple (nanasi)","Kachumbari (tomato & onion)"],
  tip:"Gentle on the gut: avoid spicy, acidic and fried foods; eat smaller, more frequent meals.",
  adj:"No spicy/acidic/fried · smaller meals"},
-  {id:"cholesterol",label:"High cholesterol",lowSatFat:true,limit:["Mandazi","Chapati","Goat meat (mbuzi)","Nyama choma (lean beef)"],
+  {id:"cholesterol",label:"High cholesterol",lowSatFat:true,limit:["Maandazi","Chapati","Goat meat (mbuzi)","Nyama choma (lean beef)"],
  tip:"Heart-smart: less fried and fatty food, more lean protein (fish, chicken), beans, and healthy fats like avocado & groundnuts.",
  adj:"Lean protein · healthy fats · more fibre"}
 ];
@@ -688,11 +688,11 @@ function conditionCard(){
     +'<div class="small muted" style="margin-top:6px">General guidance, not medical advice, follow your doctor/dietitian.</div></div>';
 }
 /* ---------- GLYCAEMIC INDEX (condition-aware) ---------- */
-const LOW_GI=/oat|uji|bean|maharage|lentil|dengu|chickpea|mbaazi|cowpea|kunde|sweet potato|kiazi|millet|brown rice|sukuma|mchicha|matembele|kisamvu|majani|mlenda|green|kabichi|tofu|yogurt|mtindi|nut|almond|korosho|groundnut|karanga|cashew|avocado|parachichi|egg|yai|fish|tilapia|dagaa|mackerel|samaki|chicken|kuku|beef|nyama|goat|mbuzi/i;
+const LOW_GI=/oat|uji|bean|maharage|lentil|dengu|adesi|chickpea|mbaazi|cowpea|kunde|sweet potato|kiazi|millet|brown rice|sukuma|mchicha|matembele|kisamvu|majani|mlenda|green|kabichi|tofu|yogurt|mtindi|nut|almond|korosho|groundnut|karanga|cashew|avocado|parachichi|egg|yai|fish|tilapia|dagaa|mackerel|samaki|chicken|kuku|beef|nyama|goat|mbuzi/i;
 function giLevel(f){ var n=((f&&f.n)||"").toLowerCase(), c=+(f&&f.c)||0;
  if(c<6) return "low";
  if(typeof HIGH_GI!=="undefined" && HIGH_GI.test(n)) return "high";
- if(/mango|embe|pineapple|nanasi|watermelon|tikiti|sugar|honey|mandazi/.test(n)) return "high";
+ if(/mango|embe|pineapple|nanasi|watermelon|tikiti|sugar|honey|andazi/.test(n)) return "high";
  if(LOW_GI.test(n)) return "low";
  return "med"; }
 function giColor(l){ return l==="high"?"var(--bad)":l==="med"?"#e0a32e":"var(--good)"; }
@@ -711,7 +711,7 @@ function portionUnit(f){ var t=(f&&f.tag)||[], n=((f&&f.n)||"").toLowerCase();
 const PORTION_STEPS=[["½",0.5],["1",1],["1½",1.5],["2",2]];
 function openLogFood(){ state._log={ foodIdx:-1, mult:1, shared:false, N:4, M:1, q:"" }; renderLogSheet(); state.pay.open=true; document.getElementById("overlay").classList.add("show"); }
 function logFind(q){ state._log.q=q; var box=document.getElementById("logresults"); if(!box)return;
- var ql=(q||"").toLowerCase(); var m=FOODS.map(function(x,i){return [x,i];}).filter(function(p){return !ql||p[0].n.toLowerCase().indexOf(ql)>=0;}).slice(0,10);
+ var ql=(q||"").toLowerCase(); var m=FOODS.map(function(x,i){return [x,i];}).filter(function(p){return !ql||(p[0].n+" "+(p[0].al||"")).toLowerCase().indexOf(ql)>=0;}).slice(0,10);
  box.innerHTML=m.map(function(p){return '<div class="ch" onclick="setLogFood('+p[1]+')">'+p[0].e+' '+escapeHtml(p[0].n)+'</div>';}).join("")||'<div class="small muted">No match, try another name.</div>'; }
 function setLogFood(i){ state._log.foodIdx=i; renderLogSheet(); }
 function setLogMult(m){ state._log.mult=m; state._log.shared=false; renderLogSheet(); }
@@ -727,7 +727,7 @@ function renderLogSheet(){ var L=state._log, f=L.foodIdx>=0?FOODS[L.foodIdx]:nul
  var h='<div class="grab"></div><div class="b" style="font-size:18px">Log what you ate</div>'
     +'<div class="small muted" style="margin-bottom:8px">The way you actually eat it, scoops, handfuls, or your share from a shared plate.</div>';
  if(!f){
- var ql=(L.q||"").toLowerCase(); var m=FOODS.map(function(x,i){return [x,i];}).filter(function(p){return !ql||p[0].n.toLowerCase().indexOf(ql)>=0;}).slice(0,10);
+ var ql=(L.q||"").toLowerCase(); var m=FOODS.map(function(x,i){return [x,i];}).filter(function(p){return !ql||(p[0].n+" "+(p[0].al||"")).toLowerCase().indexOf(ql)>=0;}).slice(0,10);
  h+='<input id="logq" placeholder="Search food (ugali, maharage, fish…)" value="'+escapeHtml(L.q||"")+'" oninput="logFind(this.value)">'
       +'<div class="chips" id="logresults" style="margin-top:8px">'+m.map(function(p){return '<div class="ch" onclick="setLogFood('+p[1]+')">'+p[0].e+' '+escapeHtml(p[0].n)+'</div>';}).join("")+'</div>';
   } else {
@@ -847,14 +847,14 @@ function foodImg(f){
  if(/fish|tilapia|mackerel|dagaa|sato|vibua|samaki/.test(n)) return "food/fish.jpg";
  if(/beef|nyama|goat|mbuzi|meat/.test(n)) return "food/beef.jpg";
  if(/egg/.test(n)) return "food/eggs.jpg";
- if(/bean|maharage|lentil|dengu|chickpea|cowpea|mbaazi|kunde|tofu/.test(n)) return "food/beans.jpg";
+ if(/bean|maharage|lentil|dengu|adesi|chickpea|cowpea|mbaazi|kunde|tofu/.test(n)) return "food/beans.jpg";
  if(/yogurt|mtindi|milk/.test(n)) return "food/yogurt.jpg";
  if(/salad|kachumbari/.test(n)) return "food/salad.jpg";
  if(/orange|chungwa/.test(n)) return "food/orange.jpg";
  if(/mango|embe|pineapple|papaya|banana|ndizi|watermelon|tikiti|guava|fruit/.test(n)) return "food/mango.jpg";
  if(/groundnut|karanga|cashew|korosho|peanut/.test(n)) return "food/peanuts.jpg";
  if(/almond|nut/.test(n)) return "food/almonds.jpg";
- if(/mandazi/.test(n)) return "food/mandazi.jpg";
+ if(/andazi/.test(n)) return "food/mandazi.jpg";
  if(tags.indexOf("veg")>=0) return "food/greens.jpg";
  if(tags.indexOf("fruit")>=0) return "food/mango.jpg";
  if(tags.indexOf("meat")>=0) return "food/chicken.jpg";
@@ -1693,7 +1693,7 @@ async function regenDay(day){
  if(!cloudOn()||!state.cloud||!state.cloud.token){ toast("Sign in to change your plan"); return; }
  state._seed=(state._seed||0)+1;
  try{
- var d=await apiFetch("/api/content/plan/day",{method:"POST",body:JSON.stringify({profile:state.profile,day:day,nonce:state._seed})});
+ var d=await apiFetch("/api/content/plan/day",{method:"POST",body:JSON.stringify({profile:state.profile,day:day,nonce:state._seed,names:2})});
  state.plan[day]={meals:d.meals};
  [0,1,2,3].forEach(function(mi){delete state.track[day+"-"+mi];});
  render(); toast("Day "+(day+1)+" regenerated");
@@ -1864,7 +1864,10 @@ async function loadPlanFromServer(){
  if(!p.weight||!p.height||!p.age) return;
  state.planError="";
  try{
- var d=await apiFetch("/api/content/plan",{method:"POST",body:JSON.stringify({profile:p})});
+  // names:2 tells the server this app knows the corrected food names (Chickpeas (dengu),
+  // Lentils (adesi), African eggplant (nyanya chungu), Maandazi). Older installs leave it out
+  // and keep getting the spellings their own translation files know.
+ var d=await apiFetch("/api/content/plan",{method:"POST",body:JSON.stringify({profile:p,names:2})});
  if(d.targets) state.targets=d.targets;
  state.plan=d.days||[];
  state.planTotalDays=d.totalDays||7;
@@ -1876,7 +1879,7 @@ async function loadPlanFromServer(){
 }
 async function loadRecipes(){
  if(!cloudOn() || !state.cloud || !state.cloud.token){ state.recipes=[]; return; }
- try{ var d=await apiFetch("/api/content/recipes"); state.recipes=d.recipes||[]; }
+ try{ var d=await apiFetch("/api/content/recipes?names=2"); state.recipes=d.recipes||[]; }
  catch(e){ state.recipes=[]; }
  render();
 }
@@ -2086,7 +2089,7 @@ var LANGUAGES=[
  {code:"fr",name:"Fran\u00e7ais",short:"FR"},
  {code:"es",name:"Espa\u00f1ol",short:"ES"}
 ];
-var I18N_VERSION="1";
+var I18N_VERSION="2";
 var I18N={lang:"en",exact:new Map(),mixed:new Map(),pats:[],mpats:[],busy:false,obs:null};
 // A sentence translated as a whole is remembered here with what it became. Its pieces must never be
 // translated again one by one: translators sometimes keep a phrase in English on purpose (the
